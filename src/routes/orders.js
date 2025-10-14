@@ -5,7 +5,7 @@ import {createOrder, getOrderById, listMyOrders} from '../controllers/orders.con
 const r = Router();
 
 r.post('/', auth, createOrder);
-r.get('/:id', auth, getOrderById);
 r.get('/me/list', auth, listMyOrders);
+r.get('/:id', auth, getOrderById);
 
 export default r;
