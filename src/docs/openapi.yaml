@@ -1,0 +1,278 @@
+openapi: 3.0.3
+info:
+  title: Sushitown API
+  version: 1.0.0
+servers:
+  - url: http://localhost:4000
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string }
+        role: { type: string, enum: [customer, staff, admin] }
+    AuthResponse:
+      type: object
+      properties:
+        token: { type: string }
+        user: { $ref: '#/components/schemas/User' }
+    Ingredient:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        priceDelta: { type: string }
+        isAvailable: { type: boolean }
+    MenuItem:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string }
+        basePrice: { type: string }
+        isActive: { type: boolean }
+        Ingredients:
+          type: array
+          items: { $ref: '#/components/schemas/Ingredient' }
+    OrderItemIngredient:
+      type: object
+      properties:
+        id: { type: integer }
+        action: { type: string, enum: [add, remove] }
+        priceDelta: { type: string }
+        Ingredient: { $ref: '#/components/schemas/Ingredient' }
+    OrderItem:
+      type: object
+      properties:
+        id: { type: integer }
+        quantity: { type: integer }
+        unitPrice: { type: string }
+        subtotal: { type: string }
+        MenuItem: { $ref: '#/components/schemas/MenuItem' }
+        OrderItemIngredients:
+          type: array
+          items: { $ref: '#/components/schemas/OrderItemIngredient' }
+    Order:
+      type: object
+      properties:
+        id: { type: integer }
+        status: { type: string, enum: [pending, accepted, preparing, ready, out_for_delivery, completed, cancelled] }
+        total: { type: string }
+        address: { type: string }
+        notes: { type: string }
+        UserId: { type: integer }
+        OrderItems:
+          type: array
+          items: { $ref: '#/components/schemas/OrderItem' }
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name: { type: string }
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+  /auth/login:
+    post:
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+  /menu:
+    get:
+      tags: [Menu]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/MenuItem' }
+  /menu/{id}:
+    get:
+      tags: [Menu]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MenuItem' }
+        '404': { description: Not Found }
+  /orders:
+    post:
+      tags: [Orders]
+      security: [ { BearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                address: { type: string }
+                notes: { type: string }
+                items:
+                  type: array
+                  items:
+                    type: object
+                    required: [menuItemId]
+                    properties:
+                      menuItemId: { type: integer }
+                      quantity: { type: integer }
+                      additions:
+                        type: array
+                        items: { type: integer }
+                      removals:
+                        type: array
+                        items: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: integer }
+                  total: { type: string }
+                  status: { type: string }
+  /orders/me/list:
+    get:
+      tags: [Orders]
+      security: [ { BearerAuth: [] } ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Order' }
+  /orders/{id}:
+    get:
+      tags: [Orders]
+      security: [ { BearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '404': { description: Not Found }
+  /admin/ingredients:
+    post:
+      tags: [Admin]
+      security: [ { BearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                priceDelta: { type: string }
+                isAvailable: { type: boolean }
+      responses:
+        '200': { description: OK }
+  /admin/menu-items:
+    post:
+      tags: [Admin]
+      security: [ { BearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, basePrice]
+              properties:
+                name: { type: string }
+                description: { type: string }
+                basePrice: { type: string }
+                isActive: { type: boolean }
+                ingredientIds:
+                  type: array
+                  items: { type: integer }
+      responses:
+        '200': { description: OK }
+  /admin/orders:
+    get:
+      tags: [Admin]
+      security: [ { BearerAuth: [] } ]
+      responses:
+        '200': { description: OK }
+  /admin/orders/{id}/status:
+    patch:
+      tags: [Admin]
+      security: [ { BearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [pending, accepted, preparing, ready, out_for_delivery, completed, cancelled]
+      responses:
+        '200': { description: OK }
+security: []
+tags:
+  - name: Auth
+  - name: Menu
+  - name: Orders
+  - name: Admin

@@ -1,6 +1,10 @@
 import express from 'express';
 import cors from 'cors';
 import http from 'http';
+import swaggerUI from 'swagger-ui-express';
+import YAML from 'yamljs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import {Server} from 'socket.io';
 import config from './config/config.js';
 import db from './models/index.js';
@@ -9,9 +13,14 @@ import menuRoutes from './routes/menu.js';
 import orderRoutes from './routes/orders.js';
 import adminRoutes from './routes/admin.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const swaggerSpec = YAML.load(path.resolve(__dirname, './docs/openapi.yaml'));
+
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use('/docs', swaggerUI.serve, swaggerUI.setup(swaggerSpec));
 
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
