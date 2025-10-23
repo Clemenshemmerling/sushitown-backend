@@ -3,6 +3,7 @@ info:
   title: Sushitown API
   version: 1.0.0
 servers:
+  - url: http://localhost:3000
   - url: http://localhost:4000
 components:
   securitySchemes:
@@ -17,7 +18,7 @@ components:
         id: { type: integer }
         name: { type: string }
         email: { type: string }
-        role: { type: string, enum: [customer, staff, admin] }
+        role: { type: string, enum: [customer, staff, admin, cook, courier] }
     AuthResponse:
       type: object
       properties:
@@ -71,6 +72,30 @@ components:
         OrderItems:
           type: array
           items: { $ref: '#/components/schemas/OrderItem' }
+    CartItem:
+      type: object
+      properties:
+        id: { type: integer }
+        menuItemId: { type: integer }
+        quantity: { type: integer }
+        unitPrice: { type: string }
+        lineTotal: { type: string }
+        addedIngredientIds:
+          type: array
+          items: { type: integer }
+        removedIngredientIds:
+          type: array
+          items: { type: integer }
+        notes: { type: string }
+        MenuItem: { $ref: '#/components/schemas/MenuItem' }
+    Cart:
+      type: object
+      properties:
+        id: { type: integer }
+        status: { type: string, enum: [active, checked_out] }
+        CartItems:
+          type: array
+          items: { $ref: '#/components/schemas/CartItem' }
 paths:
   /auth/register:
     post:
@@ -247,7 +272,13 @@ paths:
       tags: [Admin]
       security: [ { BearerAuth: [] } ]
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Order' }
   /admin/orders/{id}/status:
     patch:
       tags: [Admin]
@@ -270,9 +301,120 @@ paths:
                   enum: [pending, accepted, preparing, ready, out_for_delivery, completed, cancelled]
       responses:
         '200': { description: OK }
+  /cart:
+    get:
+      tags: [Cart]
+      security: [ { BearerAuth: [] } ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+  /cart/items:
+    post:
+      tags: [Cart]
+      security: [ { BearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [menuItemId]
+              properties:
+                menuItemId: { type: integer }
+                quantity: { type: integer, default: 1 }
+                addedIngredientIds:
+                  type: array
+                  items: { type: integer }
+                removedIngredientIds:
+                  type: array
+                  items: { type: integer }
+                notes: { type: string }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CartItem' }
+  /cart/items/{itemId}:
+    put:
+      tags: [Cart]
+      security: [ { BearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                quantity: { type: integer }
+                addedIngredientIds:
+                  type: array
+                  items: { type: integer }
+                removedIngredientIds:
+                  type: array
+                  items: { type: integer }
+                notes: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CartItem' }
+        '404': { description: Not Found }
+    delete:
+      tags: [Cart]
+      security: [ { BearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema: { type: integer }
+      responses:
+        '204': { description: No Content }
+        '404': { description: Not Found }
+  /checkout:
+    post:
+      tags: [Checkout]
+      security: [ { BearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                address: { type: string }
+                notes: { type: string }
+                deliveryLocation:
+                  type: object
+                  properties:
+                    lat: { type: number }
+                    lng: { type: number }
+                    accuracy: { type: number }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: integer }
+                  status: { type: string }
+                  total: { type: string }
 security: []
 tags:
   - name: Auth
   - name: Menu
   - name: Orders
   - name: Admin
+  - name: Cart
+  - name: Checkout

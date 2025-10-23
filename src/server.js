@@ -12,6 +12,9 @@ import authRoutes from './routes/auth.js';
 import menuRoutes from './routes/menu.js';
 import orderRoutes from './routes/orders.js';
 import adminRoutes from './routes/admin.js';
+import cartRoutes from './routes/cart.js';
+import checkoutRoutes from './routes/checkout.js';
+import adminOrdersRoutes from './routes/admin.orders.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,6 +38,9 @@ app.use('/auth', authRoutes);
 app.use('/menu', menuRoutes);
 app.use('/orders', orderRoutes);
 app.use('/admin', adminRoutes);
+app.use('/cart', cartRoutes);
+app.use('/checkout', checkoutRoutes);
+app.use('/admin/orders', adminOrdersRoutes);
 
 await db.sequelize.sync();
 server.listen(config.port);
